@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BaseTypeExtensionMethod
+namespace SHWDTech.ExtensionMethod
 {
     public static class DateTimeExtensionMethod
     {

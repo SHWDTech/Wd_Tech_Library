@@ -10,6 +10,10 @@ using SHWDTech.RepositoryModel;
 
 namespace SHWDTech.Repository
 {
+    /// <summary>
+    /// 数据仓库基类
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class RepositoryBase<T> : IRepositoryBase<T>, IDisposable where T : class, IRepositoryModelBase, new()
     {
         private readonly DbSet<T> _dbSet;
@@ -65,24 +69,25 @@ namespace SHWDTech.Repository
                 : _dbSet.Where(EntityFilter);
         }
 
-        public virtual IQueryable<T> GetAllModels()
-            => EntitySet;
-
-        public virtual IEnumerable<T> GetAllModelsSet()
-            => EntitySet.AsEnumerable();
-
         public virtual IQueryable<T> GetModels(Expression<Func<T, bool>> exp)
-            => EntitySet.Where(exp);
+            => exp == null? EntitySet : EntitySet.Where(exp);
 
         public virtual IEnumerable<T> GetModelsSet(Expression<Func<T, bool>> exp)
-            => EntitySet.Where(exp).AsEnumerable();
+            => exp == null ? EntitySet.AsEnumerable() : EntitySet.Where(exp).AsEnumerable();
 
-        public virtual T GetModel(Expression<Func<T, bool>> exp)
+        public virtual T SingleOrDefault(Expression<Func<T, bool>> exp)
             => EntitySet.SingleOrDefault();
+
+        public virtual T FirstOrDefault(Expression<Func<T, bool>> exp)
+            => EntitySet.FirstOrDefault();
 
         public virtual int Count(Expression<Func<T, bool>> exp)
             => exp == null ? EntitySet.Count() : EntitySet.Where(exp).Count();
 
+        /// <summary>
+        /// 创建默认实例
+        /// </summary>
+        /// <returns></returns>
         public static T Create() 
             => new T();
 
