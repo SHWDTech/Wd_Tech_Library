@@ -14,9 +14,16 @@ namespace SHWDTech.Repository
     /// 数据仓库基类
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RepositoryBase<T> : IRepositoryBase<T>, IDisposable where T : class, IRepositoryModelBase, new()
+    public class Repository<T> : IRepository<T>, IDisposable where T : class, IRepositoryModelBase, new()
     {
+        /// <summary>
+        /// 数据实体
+        /// </summary>
         private readonly DbSet<T> _dbSet;
+
+        public bool ExecuteCheck { get; set; }
+
+        public string DefaultConnectionNameOrString { get; set; }
 
         /// <summary>
         /// 数据库上下文
@@ -29,34 +36,38 @@ namespace SHWDTech.Repository
         protected IQueryable<T> EntitySet { get; set; }
 
         /// <summary>
-        /// 数据实体检查条件
+        /// 数据实体筛选条件
         /// </summary>
         protected Expression<Func<T, bool>> EntityFilter { get; set; }
 
         /// <summary>
+        /// 数据实体检查条件
+        /// </summary>
+        protected Expression<Func<T, bool>> EntityCheckExpression { get; set; }
+
+        /// <summary>
         /// 创建一个新的数据仓库泛型基类对象
         /// </summary>
-        protected RepositoryBase()
+        protected Repository()
         {
-            
+            DbContext = new DbContext(DefaultConnectionNameOrString);
+            _dbSet = DbContext.Set<T>();
         }
 
         /// <summary>
         /// 创建一个新的数据仓库泛型基类对象
         /// </summary>
-        protected RepositoryBase(string connString) : this()
+        protected Repository(string connString) : this()
         {
             DbContext = new DbContext(connString);
-            _dbSet = DbContext.Set<T>();
         }
 
         /// <summary>
         /// 创建一个新的数据仓库泛型基类对象
         /// </summary>
-        protected RepositoryBase(DbContext dbContext) : this()
+        protected Repository(DbContext dbContext) : this()
         {
             DbContext = dbContext;
-            _dbSet = DbContext.Set<T>();
         }
 
         /// <summary>
@@ -72,8 +83,8 @@ namespace SHWDTech.Repository
         public virtual IQueryable<T> GetModels(Expression<Func<T, bool>> exp)
             => exp == null? EntitySet : EntitySet.Where(exp);
 
-        public virtual IEnumerable<T> GetModelsSet(Expression<Func<T, bool>> exp)
-            => exp == null ? EntitySet.AsEnumerable() : EntitySet.Where(exp).AsEnumerable();
+        public virtual ICollection<T> GetModelsSet(Expression<Func<T, bool>> exp)
+            => exp == null ? EntitySet.ToList() : EntitySet.Where(exp).ToList();
 
         public virtual T SingleOrDefault(Expression<Func<T, bool>> exp)
             => EntitySet.SingleOrDefault();
@@ -100,7 +111,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int AddOrUpdate(IEnumerable<T> models)
+        public virtual int AddOrUpdate(ICollection<T> models)
         {
             foreach (var model in models)
             {
@@ -110,14 +121,14 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int PartialUpdate(T model, IEnumerable<string> propertyNames)
+        public virtual int PartialUpdate(T model, ICollection<string> propertyNames)
         {
             PartialUpdateNoCommit(model, propertyNames);
 
             return SaveChanges();
         }
 
-        public virtual int PartialUpdate(IEnumerable<T> models, IEnumerable<string> propertyNames)
+        public virtual int PartialUpdate(ICollection<T> models, ICollection<string> propertyNames)
         {
             var properties = propertyNames as string[] ?? propertyNames.ToArray();
             foreach (var model in models)
@@ -128,7 +139,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual void BulkInsert(IEnumerable<T> models)
+        public virtual void BulkInsert(ICollection<T> models)
         {
             using (var scope = new TransactionScope())
             {
@@ -146,7 +157,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int Delete(IEnumerable<T> models)
+        public virtual int Delete(ICollection<T> models)
         {
             CheckModel(models);
 
@@ -165,7 +176,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int MarkDeleted(IEnumerable<T> models)
+        public virtual int MarkDeleted(ICollection<T> models)
         {
             foreach (var model in models)
             {
@@ -182,7 +193,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int Enable(IEnumerable<T> models)
+        public virtual int Enable(ICollection<T> models)
         {
             foreach (var model in models)
             {
@@ -199,7 +210,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int Disable(IEnumerable<T> models)
+        public virtual int Disable(ICollection<T> models)
         {
             foreach (var model in models)
             {
@@ -216,7 +227,7 @@ namespace SHWDTech.Repository
             return SaveChanges();
         }
 
-        public virtual int ReverseEnable(IEnumerable<T> models)
+        public virtual int ReverseEnable(ICollection<T> models)
         {
             foreach (var model in models)
             {
@@ -247,7 +258,7 @@ namespace SHWDTech.Repository
         /// <param name="models"></param>
         private void CheckModel(object models)
         {
-            if (EntityFilter == null) return;
+            if (!ExecuteCheck || EntityCheckExpression == null) return;
 
             if (models == null) throw new ArgumentNullException(nameof(models));
 
@@ -255,10 +266,10 @@ namespace SHWDTech.Repository
             var item = models as T;
             if (item != null) checkList.Add(item);
 
-            var items = models as IEnumerable<T>;
+            var items = models as ICollection<T>;
             if (items != null) checkList.AddRange(items);
 
-            if (!checkList.Any(EntityFilter.Compile())) throw new ArgumentException("参数不符合要求");
+            if (!checkList.Any(EntityCheckExpression.Compile())) throw new ArgumentException("参数不符合要求");
         }
 
         /// <summary>
@@ -279,7 +290,7 @@ namespace SHWDTech.Repository
             }
         }
 
-        private void PartialUpdateNoCommit(T model, IEnumerable<string> propertyNames)
+        private void PartialUpdateNoCommit(T model, ICollection<string> propertyNames)
         {
             _dbSet.Attach(model);
             var modelType = model.GetType();

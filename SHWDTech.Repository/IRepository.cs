@@ -10,8 +10,18 @@ namespace SHWDTech.Repository
     /// 数据仓库基类接口
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IRepositoryBase<T> where T : class, IRepositoryModelBase, new()
+    public interface IRepository<T> where T : class, IRepositoryModelBase, new()
     {
+        /// <summary>
+        /// 是否执行数据检查
+        /// </summary>
+        bool ExecuteCheck { get; set; }
+
+        /// <summary>
+        /// 默认连接字符串或连接字符串名称
+        /// </summary>
+        string DefaultConnectionNameOrString { get; set; }
+
         /// <summary>
         /// 初始化数据仓库实体集
         /// </summary>
@@ -28,7 +38,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="exp"></param>
         /// <returns></returns>
-        IEnumerable<T> GetModelsSet(Expression<Func<T, bool>> exp);
+        ICollection<T> GetModelsSet(Expression<Func<T, bool>> exp);
 
         /// <summary>
         /// 获取集合中唯一的数据，如果集合为空则返回默认数据
@@ -70,7 +80,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int AddOrUpdate(IEnumerable<T> models);
+        int AddOrUpdate(ICollection<T> models);
 
         /// <summary>
         /// 部分更新单条数据
@@ -78,7 +88,7 @@ namespace SHWDTech.Repository
         /// <param name="model"></param>
         /// <param name="propertyNames"></param>
         /// <returns></returns>
-        int PartialUpdate(T model, IEnumerable<string> propertyNames);
+        int PartialUpdate(T model, ICollection<string> propertyNames);
 
         /// <summary>
         /// 部分更新数据集合
@@ -86,13 +96,13 @@ namespace SHWDTech.Repository
         /// <param name="models"></param>
         /// <param name="propertyNames"></param>
         /// <returns></returns>
-        int PartialUpdate(IEnumerable<T> models, IEnumerable<string> propertyNames);
+        int PartialUpdate(ICollection<T> models, ICollection<string> propertyNames);
 
         /// <summary>
         /// 快速批量插入数据
         /// </summary>
         /// <param name="models"></param>
-        void BulkInsert(IEnumerable<T> models);
+        void BulkInsert(ICollection<T> models);
 
         /// <summary>
         /// 删除单条数据
@@ -106,7 +116,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int Delete(IEnumerable<T> models);
+        int Delete(ICollection<T> models);
 
         /// <summary>
         /// 标记单条数据为已删除
@@ -120,7 +130,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int MarkDeleted(IEnumerable<T> models);
+        int MarkDeleted(ICollection<T> models);
 
         /// <summary>
         /// 标记数据为已启用
@@ -134,7 +144,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int Enable(IEnumerable<T> models);
+        int Enable(ICollection<T> models);
 
         /// <summary>
         /// 标记数据为未启用
@@ -148,7 +158,7 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int Disable(IEnumerable<T> models);
+        int Disable(ICollection<T> models);
 
         /// <summary>
         /// 反转数据启用状态
@@ -162,6 +172,6 @@ namespace SHWDTech.Repository
         /// </summary>
         /// <param name="models"></param>
         /// <returns></returns>
-        int ReverseEnable(IEnumerable<T> models);
+        int ReverseEnable(ICollection<T> models);
     }
 }
